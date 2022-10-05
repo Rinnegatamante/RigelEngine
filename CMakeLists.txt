@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE AND VITA)
+  if(DEFINED ENV{VITASDK})
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE PATH "toolchain file")
+  else()
+    message(FATAL_ERROR "Please define VITASDK to point to your SDK path!")
+  endif()
+endif()
+
 project(RigelEngine VERSION 0.8.5)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -40,6 +48,9 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/3rd_party/entityx/entityx/Entity.h")
         "It seems git submodules were not initialized. You need to run git submodule update --init --recursive, and then re-run CMake.")
 endif()
 
+if(VITA)
+    set(USE_GL_ES ON)
+endif()
 
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten")
     set(WEBASSEMBLY_GAME_PATH "" CACHE PATH "Path to folder containing Duke Nukem II files")

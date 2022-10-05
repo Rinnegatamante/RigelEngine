@@ -24,7 +24,87 @@ namespace rigel::renderer
 
 namespace
 {
+#ifdef __vita__
+const char* FRAGMENT_SOURCE_SIMPLE = R"shd(
+uniform sampler2D textureData;
 
+float4 main(
+  float2 texCoordFrag : TEXCOORD0
+) {
+  return TEXTURE_LOOKUP(textureData, texCoordFrag);
+}
+)shd";
+
+
+const char* FRAGMENT_SOURCE = R"shd(
+uniform sampler2D textureData;
+uniform float4 overlayColor;
+
+uniform float4 colorModulation;
+uniform bool enableRepeat;
+
+float4 main(
+  float2 texCoordFrag : TEXCOORD0
+) {
+  float2 texCoords = texCoordFrag;
+  if (enableRepeat) {
+    texCoords.x = frac(texCoords.x);
+    texCoords.y = frac(texCoords.y);
+  }
+
+  float4 baseColor = TEXTURE_LOOKUP(textureData, texCoords);
+  float4 modulated = baseColor * colorModulation;
+  float targetAlpha = modulated.a;
+
+  return
+    float4(lerp(modulated.rgb, overlayColor.rgb, overlayColor.a), targetAlpha);
+}
+)shd";
+
+const char* VERTEX_SOURCE_SOLID = R"shd(
+uniform float4x4 transform;
+
+void main(
+  float2 position,
+  float4 color,
+  float4 out gl_Position : POSITION,
+  float4 out colorFrag : COLOR,
+  float out gl_PointSize : PSIZE
+) {
+  SET_POINT_SIZE(1.0);
+  gl_Position = mul(float4(position, 0.0, 1.0), transform);
+  colorFrag = color;
+}
+)shd";
+
+const char* FRAGMENT_SOURCE_SOLID = R"shd(
+float4 main(
+  float4 colorFrag : COLOR
+) {
+  return colorFrag;
+}
+)shd";
+
+
+constexpr auto TEXTURED_QUAD_TEXTURE_UNIT_NAMES = std::array{"textureData"};
+
+} // namespace
+
+
+const char* STANDARD_VERTEX_SOURCE = R"shd(
+uniform float4x4 transform;
+
+void main(
+  float2 position,
+  float2 texCoord,
+  float4 out gl_Position : POSITION,
+  float2 out texCoordFrag : TEXCOORD0
+) {
+  gl_Position = mul(float4(position, 0.0, 1.0), transform);
+  texCoordFrag = float2(texCoord.x, 1.0 - texCoord.y);
+}
+)shd";
+#else
 const char* FRAGMENT_SOURCE_SIMPLE = R"shd(
 DEFAULT_PRECISION_DECLARATION
 OUTPUT_COLOR_DECLARATION
@@ -112,7 +192,7 @@ void main() {
   texCoordFrag = vec2(texCoord.x, 1.0 - texCoord.y);
 }
 )shd";
-
+#endif
 
 const ShaderSpec TEXTURED_QUAD_SHADER{
   VertexLayout::PositionAndTexCoords,

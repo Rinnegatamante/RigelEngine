@@ -43,7 +43,16 @@
 #include <SDL_messagebox.h>
 
 RIGEL_DISABLE_WARNINGS
+#ifndef __vita__
 #include <loguru.hpp>
+#else
+#define LOG_F(...)
+#define LOG_SCOPE_FUNCTION(...)
+#define LOG_IF_F(...)
+#define INFO
+#define ERROR
+#define WARNING
+#endif
 #include <lyra/lyra.hpp>
 RIGEL_RESTORE_WARNINGS
 
@@ -252,6 +261,7 @@ std::variant<CommandLineOptions, int> parseArgs(int argc, char** argv)
 
 void initializeLogging(int argc, char** argv)
 {
+#ifndef __vita__
   loguru::g_stderr_verbosity = loguru::Verbosity_WARNING;
   loguru::init(argc, argv);
 
@@ -261,6 +271,7 @@ void initializeLogging(int argc, char** argv)
     loguru::add_file(
       logFilePath.u8string().c_str(), loguru::Append, loguru::Verbosity_MAX);
   }
+#endif
 }
 
 

@@ -28,7 +28,12 @@ namespace
 {
 
 #ifdef RIGEL_USE_GL_ES
-
+#ifdef __vita__
+const auto SHADER_PREAMBLE = R"shd(
+#define TEXTURE_LOOKUP tex2D
+#define SET_POINT_SIZE(size) gl_PointSize = size;
+)shd";
+#else
 const auto SHADER_PREAMBLE = R"shd(
 #version 100
 
@@ -42,7 +47,7 @@ const auto SHADER_PREAMBLE = R"shd(
 #define HIGHP highp
 #define DEFAULT_PRECISION_DECLARATION precision mediump float;
 )shd";
-
+#endif
 #else
 
   // We generally want to stick to GLSL version 130 (from OpenGL 3.0) in order

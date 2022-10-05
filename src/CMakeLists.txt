@@ -373,7 +373,6 @@ target_link_libraries(rigel_core
     imgui-filebrowser
     nlohmann-json
     std::filesystem
-    loguru
 
     PRIVATE
     dbopl
@@ -382,6 +381,47 @@ target_link_libraries(rigel_core
     static_vector
     stb
 )
+
+if (NOT VITA)
+target_link_libraries(rigel_core loguru)
+endif()
+
+if(VITA)
+    target_link_libraries(rigel_core
+        PRIVATE
+        SDL2_mixer
+        vorbisfile
+        vorbis
+        ogg
+        mpg123
+        FLAC
+        mikmod
+        vitaGL
+        mathneon
+        vitashark
+        SceShaccCgExt
+        taihen_stub
+        SceKernelDmacMgr_stub
+        SceShaccCg_stub
+        SceAudioIn_stub
+        SceAppMgr_stub
+        SceIme_stub_weak
+        SceMotion_stub
+        SceCommonDialog_stub
+        SceHid_stub
+        SceGxm_stub
+        SceAudio_stub
+        ScePower_stub
+        SceDisplay_stub
+        SceCtrl_stub
+        SceTouch_stub
+        SceIofilemgr_stub
+        SceVshBridge_stub
+        SceSysmodule_stub
+        m
+        pthread
+    )
+endif()
 
 rigel_enable_warnings(rigel_core)
 
@@ -476,5 +516,21 @@ elseif(UNIX)
     install(FILES ${CMAKE_SOURCE_DIR}/dist/linux/rigelengine_128.png
         RENAME rigelengine.png
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/128x128/apps
+    )
+elseif(VITA)
+    include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
+    set(VITA_APP_NAME "Duke Nukem II")
+    set(VITA_TITLEID  "DUKENKEM2")
+    set(VITA_VERSION  "01.00")
+    set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -d ATTRIBUTE2=12")
+    vita_create_self(duke2.self RigelEngine UNSAFE)
+    vita_create_vpk(duke2.vpk ${VITA_TITLEID} duke2.self
+        VERSION ${VITA_VERSION}
+        NAME ${VITA_APP_NAME}
+        FILE ${CMAKE_SOURCE_DIR}/livearea/icon0.png sce_sys/icon0.png
+             ${CMAKE_SOURCE_DIR}/livearea/pic0.png sce_sys/pic0.png
+             ${CMAKE_SOURCE_DIR}/livearea/bg.png sce_sys/livearea/contents/bg.png
+             ${CMAKE_SOURCE_DIR}/livearea/startup.png sce_sys/livearea/contents/startup.png
+             ${CMAKE_SOURCE_DIR}/livearea/template.xml sce_sys/livearea/contents/template.xml
     )
 endif()

@@ -46,6 +46,8 @@ add_subdirectory(stb EXCLUDE_FROM_ALL)
 add_subdirectory(imgui EXCLUDE_FROM_ALL)
 add_subdirectory(imgui-filebrowser EXCLUDE_FROM_ALL)
 add_subdirectory(nuked-opl3 EXCLUDE_FROM_ALL)
+if (NOT VITA)
 add_subdirectory(loguru EXCLUDE_FROM_ALL)
+endif()
 
 rigel_disable_warnings(entityx)

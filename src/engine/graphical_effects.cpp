@@ -67,6 +67,139 @@ constexpr auto WATER_MASK_INDEX_FILLED = 4;
 // We assume that the texture is as large as the screen, therefore sampling
 // with the resulting tex coords should be equivalent to reading the pixel
 // located at 'position'.
+#ifdef __vita__
+const char* VERTEX_SOURCE_WATER_EFFECT = R"shd(
+uniform float4x4 transform;
+
+void main(
+  float2 position,
+  float2 texCoord,
+  float2 out texCoordFrag : TEXCOORD0,
+  float2 out texCoordMaskFrag : TEXCOORD1,
+  float4 out gl_Position : POSITION,
+  float out gl_PointSize : PSIZE
+) {
+  SET_POINT_SIZE(1.0);
+  float4 transformedPos = mul(float4(position, 0.0, 1.0), transform);
+
+  texCoordFrag = (transformedPos.xy + float2(1.0, 1.0)) / 2.0;
+  texCoordMaskFrag = float2(texCoord.x, 1.0 - texCoord.y);
+
+  gl_Position = transformedPos;
+}
+)shd";
+
+
+// The original game runs in a palette-based video mode, where the frame
+// buffer stores indices into a palette of 16 colors instead of directly
+// storing color values. The water effect is implemented as a modification
+// of these index values in the frame buffer.
+// To replicate it, we first have to transform our RGBA color values into
+// indices, which we do with the help of the rgb to palette index map.
+// With the index, we then look up the corresponding "under water" color.
+const char* FRAGMENT_SOURCE_WATER_EFFECT = R"shd(
+uniform sampler2D textureData;
+uniform sampler2D maskData;
+uniform sampler2D rgbToPaletteIndexData;
+uniform sampler2D targetPaletteData;
+
+float4 main(
+  float2 texCoordFrag : TEXCOORD0,
+  float2 texCoordMaskFrag : TEXCOORD1
+) {
+  float4 color = TEXTURE_LOOKUP(textureData, texCoordFrag);
+  float4 mask = TEXTURE_LOOKUP(maskData, texCoordMaskFrag);
+  float maskValue = mask.r;
+
+  float4 quantizedRgb = floor(color * 16.0);
+  float rgbIndex =
+    quantizedRgb.r * 16.0 * 16.0 +
+    quantizedRgb.g * 16.0 +
+    quantizedRgb.b;
+  float2 lookupCoords = float2(fmod(rgbIndex, 64.0), rgbIndex / 64.0) / 64.0;
+  float mapValue = TEXTURE_LOOKUP(rgbToPaletteIndexData, lookupCoords).r * 256.0;
+
+  float4 adjustedColor = float4(
+    TEXTURE_LOOKUP(targetPaletteData, float2(mapValue / 16.0, 0.0)).rgb,
+    color.a);
+
+  return lerp(color, adjustedColor, maskValue);
+}
+)shd";
+
+
+constexpr auto WATER_EFFECT_TEXTURE_UNIT_NAMES = std::array{
+  "textureData",
+  "maskData",
+  "rgbToPaletteIndexData",
+  "targetPaletteData"};
+
+const renderer::ShaderSpec WATER_EFFECT_SHADER{
+  renderer::VertexLayout::PositionAndTexCoords,
+  WATER_EFFECT_TEXTURE_UNIT_NAMES,
+  VERTEX_SOURCE_WATER_EFFECT,
+  FRAGMENT_SOURCE_WATER_EFFECT};
+
+
+const char* VERTEX_SOURCE_CLOAK_EFFECT = R"shd(
+uniform float4x4 transform;
+uniform float4x4 backgroundTransform;
+
+void main(
+  float2 position,
+  float2 texCoord,
+  float2 out texCoordFrag : TEXCOORD0,
+  float2 out texCoordBackgroundFrag : TEXCOORD1,
+  float4 out gl_Position : POSITION,
+  float out gl_PointSize : PSIZE
+) {
+  SET_POINT_SIZE(1.0);
+  float4 transformedPosForUv = mul(float4(position, 0.0, 1.0), backgroundTransform);
+
+  texCoordBackgroundFrag = (transformedPosForUv.xy + float2(1.0, 1.0)) / 2.0;
+  texCoordFrag = float2(texCoord.x, 1.0 - texCoord.y);
+
+  gl_Position = mul(float4(position, 0.0, 1.0), transform);
+}
+)shd";
+
+const char* FRAGMENT_SOURCE_CLOAK_EFFECT = R"shd(
+uniform sampler2D backgroundTextureData;
+uniform sampler2D foregroundTextureData;
+uniform sampler2D rgbToPaletteIndexData;
+uniform sampler2D blendMapData;
+
+
+float colorToPaletteIndex(float4 color) {
+  float4 quantizedRgb = floor(color * 16.0);
+  float rgbIndex =
+    quantizedRgb.r * 16.0 * 16.0 +
+    quantizedRgb.g * 16.0 +
+    quantizedRgb.b;
+  float2 lookupCoords = float2(fmod(rgbIndex, 64.0), rgbIndex / 64.0) / 64.0;
+  return TEXTURE_LOOKUP(rgbToPaletteIndexData, lookupCoords).r * 256.0;
+}
+
+
+float4 main(
+  float2 texCoordFrag : TEXCOORD0,
+  float2 texCoordBackgroundFrag : TEXCOORD1
+) {
+  float4 background = TEXTURE_LOOKUP(backgroundTextureData, texCoordBackgroundFrag);
+  float4 foreground = TEXTURE_LOOKUP(foregroundTextureData, texCoordFrag);
+
+  float index1 = colorToPaletteIndex(background);
+  float index2 = colorToPaletteIndex(foreground);
+
+  float3 blendedColor =
+    TEXTURE_LOOKUP(blendMapData, float2(index1, index2) / 16.0).rgb;
+
+  float blendedAlpha = foreground.a + 1.0 - background.a;
+
+  return float4(blendedColor, blendedAlpha);
+}
+)shd";
+#else
 const char* VERTEX_SOURCE_WATER_EFFECT = R"shd(
 ATTRIBUTE vec2 position;
 ATTRIBUTE vec2 texCoord;
@@ -203,7 +336,7 @@ void main() {
   OUTPUT_COLOR = vec4(blendedColor, blendedAlpha);
 }
 )shd";
-
+#endif
 
 constexpr auto CLOAK_EFFECT_TEXTURE_UNIT_NAMES = std::array{
   "backgroundTextureData",

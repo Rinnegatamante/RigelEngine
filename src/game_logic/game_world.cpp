@@ -42,7 +42,16 @@
 #include "ui/menu_element_renderer.hpp"
 #include "ui/utils.hpp"
 
+#ifndef __vita__
 #include <loguru.hpp>
+#else
+#define LOG_F(...)
+#define LOG_SCOPE_FUNCTION(...)
+#define LOG_IF_F(...)
+#define INFO
+#define ERROR
+#define WARNING
+#endif
 
 #include <cassert>
 #include <iomanip>

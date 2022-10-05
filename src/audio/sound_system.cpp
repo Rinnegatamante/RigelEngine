@@ -24,7 +24,16 @@
 #include "base/string_utils.hpp"
 #include "sdl_utils/error.hpp"
 
+#ifndef __vita__
 #include <loguru.hpp>
+#else
+#define LOG_F(...)
+#define LOG_SCOPE_FUNCTION(...)
+#define LOG_IF_F(...)
+#define INFO
+#define ERROR
+#define WARNING
+#endif
 #include <speex/speex_resampler.h>
 
 #include <algorithm>

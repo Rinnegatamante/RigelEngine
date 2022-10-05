@@ -24,7 +24,16 @@
 RIGEL_DISABLE_WARNINGS
 #include <SDL_filesystem.h>
 #include <SDL_keyboard.h>
+#ifndef __vita__
 #include <loguru.hpp>
+#else
+#define LOG_F(...)
+#define LOG_SCOPE_FUNCTION(...)
+#define LOG_IF_F(...)
+#define INFO
+#define ERROR
+#define WARNING
+#endif
 #include <nlohmann/json.hpp>
 RIGEL_RESTORE_WARNINGS
 
@@ -902,6 +911,10 @@ bool UserProfile::hasProgressData() const
 std::optional<std::filesystem::path> createOrGetPreferencesPath()
 {
   namespace fs = std::filesystem;
+  
+#ifdef __vita__
+  return fs::path("ux0:data/rigel");
+#endif
 
   auto deleter = [](char* path) {
     SDL_free(path);

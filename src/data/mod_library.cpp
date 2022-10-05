@@ -18,7 +18,16 @@
 
 #include "base/container_utils.hpp"
 
+#ifndef __vita__
 #include <loguru.hpp>
+#else
+#define LOG_F(...)
+#define LOG_SCOPE_FUNCTION(...)
+#define LOG_IF_F(...)
+#define INFO
+#define ERROR
+#define WARNING
+#endif
 
 #include <algorithm>
 #include <cassert>

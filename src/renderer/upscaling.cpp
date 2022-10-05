@@ -43,6 +43,29 @@ constexpr auto PIXEL_PERFECT_SCALE_Y = 6;
 //
 // This is based on
 // https://github.com/rsn8887/Sharp-Bilinear-Shaders/blob/58ef94a8f96548d660ab46ee76dd6322ac1a7adb/Copy_To_RetroPie/shaders/sharp-bilinear-simple.glsl
+#ifdef __vita__
+const char* FRAGMENT_SOURCE = R"shd(
+uniform sampler2D textureData;
+uniform float2 textureSize;
+uniform float2 preScaleFactor;
+
+float4 main(
+  float2 texCoordFrag : TEXCOORD0
+) {
+  float2 pxCoords = texCoordFrag * textureSize;
+
+  float2 regionRange = 0.5 - 0.5 / preScaleFactor;
+  float2 alpha = frac(pxCoords) - 0.5;
+  float2 adjustedAlpha = (alpha - clamp(alpha, -regionRange, regionRange));
+  float2 offset = adjustedAlpha * preScaleFactor + 0.5;
+  float2 adjustedPxCoords = floor(pxCoords) + offset;
+
+  float2 adjustedTexCoords = adjustedPxCoords / textureSize;
+
+  return TEXTURE_LOOKUP(textureData, adjustedTexCoords);
+}
+)shd";
+#else
 const char* FRAGMENT_SOURCE = R"shd(
 DEFAULT_PRECISION_DECLARATION
 OUTPUT_COLOR_DECLARATION
@@ -67,7 +90,7 @@ void main() {
   OUTPUT_COLOR = TEXTURE_LOOKUP(textureData, adjustedTexCoords);
 }
 )shd";
-
+#endif
 constexpr auto TEXTURE_UNIT_NAMES = std::array{"textureData"};
 
 const ShaderSpec SHARP_BILINEAR_SHADER{
@@ -270,7 +293,9 @@ void UpscalingBuffer::present(
   // because we don't need to implement the modulation feature in our custom
   // sharp bilinear shader if we do it that way.
   glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+#ifndef __vita__
   glBlendColor(0.0f, 0.0f, 0.0f, std::clamp(mAlphaMod / 255.0f, 0.0f, 1.0f));
+#endif
   auto blendFuncGuard =
     base::defer([]() { glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); });
 
