@@ -387,9 +387,13 @@ target_link_libraries(rigel_core loguru)
 endif()
 
 if(VITA)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(SDL2_mixer REQUIRED IMPORTED_TARGET SDL2_mixer)
     target_link_libraries(rigel_core
         PRIVATE
+        PkgConfig::SDL2_mixer
         SDL2_mixer
+        SDL2
         vorbisfile
         vorbis
         ogg
